@@ -353,158 +353,188 @@
   }
 
 
-  /*************************************************
-   * REGISTRAR ASISTENCIA
-   *************************************************/
+ /*************************************************
+ * REGISTRAR ASISTENCIA
+ *************************************************/
 
-  function registrarAsistencia() {
+function registrarAsistencia() {
 
-    if (procesando) return;
-
-
-    const token =
-      document.getElementById('token').value.trim();
+  if (procesando) return;
 
 
-    const resultado =
-      document.getElementById('resultado');
+  const token =
+    document.getElementById('token').value.trim();
 
 
-    if (token === '') {
-
-      resultado.innerHTML =
-        '<div class="error">' +
-        '❌ Escribe el token del docente.' +
-        '</div>';
-
-      return;
-    }
+  const resultado =
+    document.getElementById('resultado');
 
 
-    if (!fotografiaTomada) {
-
-      resultado.innerHTML =
-        '<div class="error">' +
-        '❌ Primero toma la fotografía del docente.' +
-        '</div>';
-
-      return;
-    }
-
-
-    procesando = true;
-
+  if (token === '') {
 
     resultado.innerHTML =
-      '<div class="espera">' +
-      '⏳ Registrando asistencia...' +
+      '<div class="error">' +
+      '❌ Escribe el token del docente.' +
       '</div>';
 
-
-    /*
-     * POR AHORA:
-     *
-     * Utilizamos la misma comunicación JSONP
-     * que ya comprobamos que funciona.
-     *
-     * En la siguiente etapa agregaremos el envío
-     * de la fotografía a Apps Script.
-     */
+    return;
+  }
 
 
-    const callback =
-      'respuestaAsistencia_' + Date.now();
+  if (!fotografiaTomada) {
+
+    resultado.innerHTML =
+      '<div class="error">' +
+      '❌ Primero toma la fotografía del docente.' +
+      '</div>';
+
+    return;
+  }
 
 
-    window[callback] =
-      function(respuesta) {
+  procesando = true;
 
-        console.log(
-          'Respuesta de Apps Script:',
-          respuesta
-        );
-
-
-if (respuesta.ok) {
 
   resultado.innerHTML =
-    '<div class="exito">' +
-    '✅ ' + respuesta.mensaje +
-    '<br><br>' +
-    '<strong>' +
-    respuesta.nombre +
-    '</strong>' +
-    '<br>' +
-    respuesta.hora +
-    '<br><br>' +
-    '📷 Registro realizado correctamente.' +
+    '<div class="espera">' +
+    '⏳ Registrando asistencia...' +
     '</div>';
 
-  // Enviar la fotografía sin cambiar el mensaje de pantalla
-  enviarFotografia(token);
 
-  // Recargar la pantalla después de 6 segundos
-  setTimeout(function() {
-    location.reload();
-  }, 6000);
+  /*
+   * Comunicación JSONP con Apps Script
+   */
 
-}
-        else {
-
-  resultado.innerHTML =
-    '<div class="error">' +
-    '❌ ' +
-    respuesta.mensaje +
-    '<br><br>' +
-    '📋 Preparando el siguiente registro...' +
-    '</div>';
-
-  // Recargar también cuando el docente
-  // ya tiene entrada y salida registradas
-  setTimeout(function() {
-    location.reload();
-  }, 6000);
-
-}
+  const callback =
+    'respuestaAsistencia_' + Date.now();
 
 
-    const script =
-      document.createElement('script');
+  window[callback] =
+    function(respuesta) {
+
+      console.log(
+        'Respuesta de Apps Script:',
+        respuesta
+      );
 
 
-    script.src =
-      URL_APPS_SCRIPT +
-      '?callback=' +
-      encodeURIComponent(callback) +
-      '&token=' +
-      encodeURIComponent(token);
+      /***********************************************
+       * REGISTRO EXITOSO
+       ***********************************************/
 
-
-    script.onerror =
-      function() {
-
-        console.error(
-          'No se pudo cargar la respuesta de Apps Script.'
-        );
-
+      if (respuesta.ok) {
 
         resultado.innerHTML =
-          '<div class="error">' +
-          '❌ No fue posible comunicarse con el sistema de asistencia.' +
+          '<div class="exito">' +
+          '✅ ' + respuesta.mensaje +
+          '<br><br>' +
+          '<strong>' +
+          respuesta.nombre +
+          '</strong>' +
+          '<br>' +
+          respuesta.hora +
+          '<br><br>' +
+          '📷 Registro realizado correctamente.' +
           '</div>';
 
 
-        delete window[callback];
-
-        procesando = false;
-
-      };
+        // Enviar la fotografía sin cambiar
+        // el mensaje que está viendo el docente
+        enviarFotografia(token);
 
 
-    document.body.appendChild(script);
+        // Recargar después de 6 segundos
+        setTimeout(function() {
 
-  }
+          location.reload();
 
+        }, 6000);
+
+
+      }
+
+      /***********************************************
+       * REGISTRO NO PERMITIDO
+       * Ejemplo: entrada y salida ya registradas
+       ***********************************************/
+
+      else {
+
+        resultado.innerHTML =
+          '<div class="error">' +
+          '❌ ' +
+          respuesta.mensaje +
+          '<br><br>' +
+          '📋 Preparando el siguiente registro...' +
+          '</div>';
+
+
+        // Recargar también en caso de error
+        setTimeout(function() {
+
+          location.reload();
+
+        }, 6000);
+
+      }
+
+
+      // Eliminar el callback
+      delete window[callback];
+
+    };
+
+
+  /***********************************************
+   * CREAR SCRIPT JSONP
+   ***********************************************/
+
+  const script =
+    document.createElement('script');
+
+
+  script.src =
+    URL_APPS_SCRIPT +
+    '?callback=' +
+    encodeURIComponent(callback) +
+    '&token=' +
+    encodeURIComponent(token);
+
+
+  script.onerror =
+    function() {
+
+      console.error(
+        'No se pudo cargar la respuesta de Apps Script.'
+      );
+
+
+      resultado.innerHTML =
+        '<div class="error">' +
+        '❌ No fue posible comunicarse con el sistema de asistencia.' +
+        '<br><br>' +
+        '📋 Preparando el siguiente registro...' +
+        '</div>';
+
+
+      delete window[callback];
+
+      procesando = false;
+
+
+      // También regresar a la pantalla inicial
+      setTimeout(function() {
+
+        location.reload();
+
+      }, 6000);
+
+    };
+
+
+  document.body.appendChild(script);
+
+}
 /*************************************************
  * ENVIAR FOTOGRAFÍA A APPS SCRIPT
  *************************************************/
