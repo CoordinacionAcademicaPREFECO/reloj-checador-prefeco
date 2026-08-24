@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Lector QR - PREFECO 2/18</title>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f5f1e8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #0b2345;
+    }
+
+    .contenedor {
+      width: 92%;
+      max-width: 650px;
+      background: white;
+      border-radius: 25px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,.15);
+    }
+
+    h1 {
+      margin-bottom: 5px;
+      color: #0b2345;
+    }
+
+    h2 {
+      font-weight: normal;
+      margin-top: 5px;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 25px auto;
+    }
+
+    #resultado {
+      margin-top: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      min-height: 60px;
+    }
+
+    .exito {
+      color: #147a35;
+    }
+
+    .espera {
+      color: #0b2345;
+    }
+
+    .error {
+      color: #a51d2d;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="contenedor">
+
+    <h1>PREFECO 2/18 HALCONES</h1>
+
+    <h2>Lector QR</h2>
+
+    <p>
+      Coloca el código QR frente a la cámara.
+    </p>
+
+    <div id="reader"></div>
+
+    <div id="resultado" class="espera">
+      📷 Preparando cámara...
+    </div>
+
+  </div>
+
+<script>
+
+  let lector = null;
+  let procesando = false;
+
+  function iniciarCamara() {
+
+    lector = new Html5Qrcode("reader");
+
+    const configuracion = {
+      fps: 10,
+      qrbox: {
+        width: 250,
+        height: 250
+      }
+    };
+
+    lector.start(
+      {
+        facingMode: "environment"
+      },
+      configuracion,
+      cuandoLeeQR,
+      function(errorMessage) {
+        // Los errores normales de búsqueda se ignoran.
+      }
+    )
+    .then(function() {
+
+      document.getElementById("resultado").innerHTML =
+        "📷 Apunta la cámara al código QR";
+
+    })
+    .catch(function(error) {
+
+      document.getElementById("resultado").innerHTML =
+        '<div class="error">' +
+        '❌ No fue posible iniciar la cámara.<br><br>' +
+        'Error: ' + error.name +
+        '<br>' +
+        error.message +
+        '</div>';
+
+      console.error(error);
+    });
+  }
+
+
+  function cuandoLeeQR(texto) {
+
+    if (procesando) return;
+
+    procesando = true;
+
+    document.getElementById("resultado").innerHTML =
+      '<div class="exito">' +
+      '✅ QR DETECTADO<br><br>' +
+      'Código leído:<br>' +
+      '<strong>' + texto + '</strong>' +
+      '</div>';
+
+    // Por ahora NO enviamos nada a Apps Script.
+    // Primero queremos comprobar únicamente
+    // que la cámara y el lector QR funcionan.
+
+    if (lector) {
+      lector.stop()
+        .then(function() {
+          lector.clear();
+        })
+        .catch(function(error) {
+          console.error(error);
+        });
+    }
+  }
+
+
+  iniciarCamara();
+
+</script>
+
+</body>
+</html>
