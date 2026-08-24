@@ -451,21 +451,21 @@ if (respuesta.ok) {
 }
         else {
 
-          resultado.innerHTML =
-            '<div class="error">' +
-            '❌ ' +
-            respuesta.mensaje +
-            '</div>';
+  resultado.innerHTML =
+    '<div class="error">' +
+    '❌ ' +
+    respuesta.mensaje +
+    '<br><br>' +
+    '📋 Preparando el siguiente registro...' +
+    '</div>';
 
-        }
+  // Recargar también cuando el docente
+  // ya tiene entrada y salida registradas
+  setTimeout(function() {
+    location.reload();
+  }, 6000);
 
-
-        delete window[callback];
-
-
-        procesando = false;
-
-      };
+}
 
 
     const script =
