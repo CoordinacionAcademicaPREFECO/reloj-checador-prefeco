@@ -437,19 +437,18 @@ if (respuesta.ok) {
     '<br>' +
     respuesta.hora +
     '<br><br>' +
-    '📷 Preparando el siguiente registro...' +
+    '📷 Registro realizado correctamente.' +
     '</div>';
 
-  // Enviar la fotografía
+  // Enviar la fotografía sin cambiar el mensaje de pantalla
   enviarFotografia(token);
 
-  // Recargar la pantalla después de 4 segundos
+  // Recargar la pantalla después de 3 segundos
   setTimeout(function() {
     location.reload();
-  }, 4000);
+  }, 3000);
 
 }
-
         else {
 
           resultado.innerHTML =
