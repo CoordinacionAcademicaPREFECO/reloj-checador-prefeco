@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Lector QR - PREFECO 2/18</title>
-
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <title>Reloj Checador - PREFECO 2/18</title>
 
   <style>
     body {
@@ -40,17 +38,52 @@
       margin-top: 5px;
     }
 
-    #reader {
+    label {
+      display: block;
+      margin-top: 25px;
+      margin-bottom: 8px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    #token {
+      width: 90%;
+      max-width: 400px;
+      padding: 14px;
+      font-size: 18px;
+      border: 2px solid #0b2345;
+      border-radius: 10px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    #camara {
       width: 100%;
       max-width: 500px;
-      margin: 25px auto;
+      margin: 25px auto 10px;
+      border-radius: 15px;
+      overflow: hidden;
+      background: #222;
+    }
+
+    #video {
+      width: 100%;
+      display: block;
+    }
+
+    #foto {
+      width: 100%;
+      max-width: 500px;
+      margin: 15px auto;
+      border-radius: 15px;
+      display: none;
     }
 
     #resultado {
       margin-top: 20px;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
-      min-height: 80px;
+      min-height: 70px;
     }
 
     .exito {
@@ -74,7 +107,16 @@
       color: white;
       font-size: 18px;
       cursor: pointer;
-      margin-top: 15px;
+      margin: 8px;
+    }
+
+    .boton:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    #canvas {
+      display: none;
     }
   </style>
 </head>
@@ -87,25 +129,64 @@
 
     <h2>Capacitación Docente 2026</h2>
 
-    <p>
-      Acerca el código QR personal a la cámara.
-    </p>
+    <label for="token">
+      Token del docente
+    </label>
 
-    <div id="reader"></div>
+    <input
+      type="text"
+      id="token"
+      placeholder="Escribe tu token"
+      autocomplete="off"
+    >
 
-    <div id="resultado" class="espera">
-      📷 Preparando cámara...
+    <div id="camara">
+
+      <video
+        id="video"
+        autoplay
+        playsinline>
+      </video>
+
     </div>
 
-    <button
-      id="botonReiniciar"
-      class="boton"
-      onclick="reiniciarCamara()"
-      style="display:none;">
-      📷 Escanear otro QR
-    </button>
+    <canvas id="canvas"></canvas>
+
+    <img
+      id="foto"
+      alt="Fotografía del docente"
+    >
+
+    <div>
+
+      <button
+        id="botonFoto"
+        class="boton"
+        onclick="tomarFotografia()"
+        disabled>
+        📷 Tomar fotografía
+      </button>
+
+      <button
+        id="botonRegistrar"
+        class="boton"
+        onclick="registrarAsistencia()"
+        disabled>
+        ✅ Registrar asistencia
+      </button>
+
+    </div>
+
+    <div
+      id="resultado"
+      class="espera">
+
+      📷 Preparando cámara...
+
+    </div>
 
   </div>
+
 
 <script>
 
@@ -117,7 +198,12 @@
     'https://script.google.com/macros/s/AKfycbzRnC-K4tNU5todhu0QZVC3ryHVdG-8bc3UaYXJzLFZr3kT22Rry8yWp5x_vHVlZ9QJ/exec';
 
 
-  let lector = null;
+  /*************************************************
+   * VARIABLES
+   *************************************************/
+
+  let flujoCamara = null;
+  let fotografiaTomada = false;
   let procesando = false;
 
 
@@ -125,169 +211,289 @@
    * INICIAR CÁMARA
    *************************************************/
 
-  function iniciarCamara() {
+  async function iniciarCamara() {
 
-    procesando = false;
+    const video =
+      document.getElementById('video');
 
-    document.getElementById('botonReiniciar').style.display = 'none';
+    const resultado =
+      document.getElementById('resultado');
 
-    document.getElementById('resultado').innerHTML =
-      '📷 Apunta la cámara al código QR';
+    try {
 
-    lector = new Html5Qrcode("reader");
+      flujoCamara =
+        await navigator.mediaDevices.getUserMedia({
 
-    const configuracion = {
-      fps: 10,
-      qrbox: {
-        width: 250,
-        height: 250
-      }
-    };
+          video: {
+            facingMode: "user"
+          },
 
-    lector.start(
-      {
-        facingMode: "environment"
-      },
-      configuracion,
-      cuandoLeeQR,
-      function(errorMessage) {
-        // Los errores normales de búsqueda se ignoran.
-      }
-    )
-    .catch(function(error) {
+          audio: false
 
-      document.getElementById('resultado').innerHTML =
-        '<div class="error">' +
-        '❌ No fue posible iniciar la cámara.<br><br>' +
-        'Error: ' + error.name +
-        '<br>' +
-        error.message +
-        '</div>';
+        });
 
-      console.error(error);
-    });
-  }
-
-
-  /*************************************************
-   * CUANDO SE DETECTA UN QR
-   *************************************************/
-
-  function cuandoLeeQR(texto) {
-
-  if (procesando) return;
-
-  procesando = true;
-
-  const resultado = document.getElementById('resultado');
-
-  resultado.innerHTML =
-    '<div class="espera">' +
-    '⏳ Código detectado.<br><br>' +
-    'Registrando asistencia...' +
-    '</div>';
-
-  detenerCamara();
-
-  // Nombre único para recibir la respuesta
-  const callback = 'respuestaQR_' + Date.now();
-
-  // Crear la función que Apps Script va a llamar
-  window[callback] = function(respuesta) {
-
-    console.log('Respuesta de Apps Script:', respuesta);
-
-    if (respuesta.ok) {
+      video.srcObject = flujoCamara;
 
       resultado.innerHTML =
-        '<div class="exito">' +
-        '✅ ' + respuesta.mensaje +
-        '<br><br>' +
-        '<strong>' + respuesta.nombre + '</strong>' +
-        '<br>' +
-        respuesta.hora +
-        '</div>';
+        '📷 Coloca tu rostro frente a la cámara.';
 
-    } else {
+      document.getElementById('botonFoto').disabled =
+        false;
 
-      resultado.innerHTML =
-        '<div class="error">' +
-        '❌ ' + respuesta.mensaje +
-        '</div>';
     }
 
-    // Eliminar el callback después de recibir la respuesta
-    delete window[callback];
+    catch (error) {
 
-    // Mostrar botón para volver a escanear
-    document.getElementById('botonReiniciar').style.display =
-      'inline-block';
+      console.error(error);
 
-  };
+      resultado.innerHTML =
+        '<div class="error">' +
+        '❌ No fue posible iniciar la cámara.<br><br>' +
+        'Verifica que hayas permitido el acceso a la cámara.' +
+        '</div>';
 
-  // Crear una etiqueta SCRIPT.
-  // Esto evita el problema CORS de fetch().
-  const script = document.createElement('script');
+    }
 
-  script.src =
-    URL_APPS_SCRIPT +
-    '?callback=' +
-    encodeURIComponent(callback) +
-    '&token=' +
-    encodeURIComponent(texto);
-
-  script.onerror = function() {
-
-    console.error('No se pudo cargar la respuesta de Apps Script.');
-
-    resultado.innerHTML =
-      '<div class="error">' +
-      '❌ No fue posible comunicarse con el sistema de asistencia.' +
-      '</div>';
-
-    delete window[callback];
-
-    document.getElementById('botonReiniciar').style.display =
-      'inline-block';
-  };
-
-  document.body.appendChild(script);
-}
-
-  /*************************************************
-   * DETENER CÁMARA
-   *************************************************/
-
-  function detenerCamara() {
-
-    if (!lector) return;
-
-    lector.stop()
-      .then(function() {
-
-        lector.clear();
-
-      })
-      .catch(function(error) {
-
-        console.error(
-          'Error al detener la cámara:',
-          error
-        );
-
-      });
   }
 
 
   /*************************************************
-   * REINICIAR CÁMARA
+   * TOMAR FOTOGRAFÍA
    *************************************************/
 
-  function reiniciarCamara() {
+  function tomarFotografia() {
 
-    document.getElementById('reader').innerHTML = '';
+    const video =
+      document.getElementById('video');
 
-    iniciarCamara();
+    const canvas =
+      document.getElementById('canvas');
+
+    const foto =
+      document.getElementById('foto');
+
+    const resultado =
+      document.getElementById('resultado');
+
+    const token =
+      document.getElementById('token').value.trim();
+
+
+    if (token === '') {
+
+      resultado.innerHTML =
+        '<div class="error">' +
+        '❌ Primero escribe el token del docente.' +
+        '</div>';
+
+      document.getElementById('token').focus();
+
+      return;
+    }
+
+
+    if (!video.videoWidth || !video.videoHeight) {
+
+      resultado.innerHTML =
+        '<div class="error">' +
+        '❌ La cámara todavía no está lista.' +
+        '</div>';
+
+      return;
+    }
+
+
+    canvas.width =
+      video.videoWidth;
+
+    canvas.height =
+      video.videoHeight;
+
+
+    const contexto =
+      canvas.getContext('2d');
+
+
+    contexto.drawImage(
+      video,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+    const imagen =
+      canvas.toDataURL(
+        'image/jpeg',
+        0.80
+      );
+
+
+    foto.src = imagen;
+
+    foto.style.display =
+      'block';
+
+
+    fotografiaTomada =
+      true;
+
+
+    document.getElementById('botonRegistrar').disabled =
+      false;
+
+
+    resultado.innerHTML =
+      '<div class="espera">' +
+      '✅ Fotografía tomada correctamente.<br>' +
+      'Revisa la imagen y pulsa "Registrar asistencia".' +
+      '</div>';
+
+  }
+
+
+  /*************************************************
+   * REGISTRAR ASISTENCIA
+   *************************************************/
+
+  function registrarAsistencia() {
+
+    if (procesando) return;
+
+
+    const token =
+      document.getElementById('token').value.trim();
+
+
+    const resultado =
+      document.getElementById('resultado');
+
+
+    if (token === '') {
+
+      resultado.innerHTML =
+        '<div class="error">' +
+        '❌ Escribe el token del docente.' +
+        '</div>';
+
+      return;
+    }
+
+
+    if (!fotografiaTomada) {
+
+      resultado.innerHTML =
+        '<div class="error">' +
+        '❌ Primero toma la fotografía del docente.' +
+        '</div>';
+
+      return;
+    }
+
+
+    procesando = true;
+
+
+    resultado.innerHTML =
+      '<div class="espera">' +
+      '⏳ Registrando asistencia...' +
+      '</div>';
+
+
+    /*
+     * POR AHORA:
+     *
+     * Utilizamos la misma comunicación JSONP
+     * que ya comprobamos que funciona.
+     *
+     * En la siguiente etapa agregaremos el envío
+     * de la fotografía a Apps Script.
+     */
+
+
+    const callback =
+      'respuestaAsistencia_' + Date.now();
+
+
+    window[callback] =
+      function(respuesta) {
+
+        console.log(
+          'Respuesta de Apps Script:',
+          respuesta
+        );
+
+
+        if (respuesta.ok) {
+
+          resultado.innerHTML =
+            '<div class="exito">' +
+            '✅ ' + respuesta.mensaje +
+            '<br><br>' +
+            '<strong>' +
+            respuesta.nombre +
+            '</strong>' +
+            '<br>' +
+            respuesta.hora +
+            '</div>';
+
+        }
+
+        else {
+
+          resultado.innerHTML =
+            '<div class="error">' +
+            '❌ ' +
+            respuesta.mensaje +
+            '</div>';
+
+        }
+
+
+        delete window[callback];
+
+
+        procesando = false;
+
+      };
+
+
+    const script =
+      document.createElement('script');
+
+
+    script.src =
+      URL_APPS_SCRIPT +
+      '?callback=' +
+      encodeURIComponent(callback) +
+      '&token=' +
+      encodeURIComponent(token);
+
+
+    script.onerror =
+      function() {
+
+        console.error(
+          'No se pudo cargar la respuesta de Apps Script.'
+        );
+
+
+        resultado.innerHTML =
+          '<div class="error">' +
+          '❌ No fue posible comunicarse con el sistema de asistencia.' +
+          '</div>';
+
+
+        delete window[callback];
+
+        procesando = false;
+
+      };
+
+
+    document.body.appendChild(script);
+
   }
 
 
