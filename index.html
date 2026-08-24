@@ -513,6 +513,7 @@ function enviarFotografia(token) {
   const resultado =
     document.getElementById('resultado');
 
+
   if (!foto.src) {
 
     resultado.innerHTML +=
@@ -525,101 +526,73 @@ function enviarFotografia(token) {
 
 
   /*
-   * Creamos un formulario invisible.
-   * La fotografía se envía mediante POST
-   * a Google Apps Script.
+   * Preparar los datos para enviar mediante POST.
    */
 
-  const formulario =
-    document.createElement('form');
+  const datos =
+    new URLSearchParams();
 
-  formulario.method = 'POST';
+  datos.append(
+    'token',
+    token
+  );
 
-  formulario.action =
-    URL_APPS_SCRIPT;
-
-  formulario.target =
-    'ventanaFotografia';
-
-
-  const ventana =
-    document.createElement('iframe');
-
-  ventana.name =
-    'ventanaFotografia';
-
-  ventana.style.display =
-    'none';
-
-  document.body.appendChild(ventana);
+  datos.append(
+    'fotografia',
+    foto.src
+  );
 
 
   /*
-   * Token del docente
+   * Enviar a Google Apps Script.
+   *
+   * no-cors permite realizar el envío
+   * desde GitHub Pages sin bloquear la petición
+   * por CORS.
    */
 
-  const campoToken =
-    document.createElement('input');
+  fetch(
+    URL_APPS_SCRIPT,
+    {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type':
+          'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: datos.toString()
+    }
+  )
+  .then(function() {
 
-  campoToken.type =
-    'hidden';
+    console.log(
+      'Fotografía enviada a Apps Script.'
+    );
 
-  campoToken.name =
-    'token';
-
-  campoToken.value =
-    token;
-
-  formulario.appendChild(campoToken);
-
-
-  /*
-   * Fotografía en formato Base64
-   */
-
-  const campoFotografia =
-    document.createElement('input');
-
-  campoFotografia.type =
-    'hidden';
-
-  campoFotografia.name =
-    'fotografia';
-
-  campoFotografia.value =
-    foto.src;
-
-  formulario.appendChild(campoFotografia);
-
-
-  document.body.appendChild(formulario);
-
-
-  /*
-   * Enviar
-   */
-
-  formulario.submit();
-
-
-  /*
-   * Por ahora mostramos que el envío
-   * fue iniciado.
-   */
-
-  setTimeout(function() {
 
     resultado.innerHTML =
       '<div class="exito">' +
       '✅ Asistencia registrada correctamente.' +
       '<br><br>' +
-      '📷 Fotografía enviada.' +
+      '📷 Fotografía enviada para guardar.' +
       '</div>';
 
-    formulario.remove();
-    ventana.remove();
+  })
+  .catch(function(error) {
 
-  }, 1500);
+    console.error(
+      'Error al enviar fotografía:',
+      error
+    );
+
+
+    resultado.innerHTML +=
+      '<br><span class="error">' +
+      '⚠️ La asistencia fue registrada, ' +
+      'pero hubo un problema al enviar la fotografía.' +
+      '</span>';
+
+  });
 
 }
   
