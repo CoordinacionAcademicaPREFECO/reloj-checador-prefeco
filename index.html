@@ -175,91 +175,84 @@
 
   function cuandoLeeQR(texto) {
 
-    if (procesando) return;
+  if (procesando) return;
 
-    procesando = true;
+  procesando = true;
 
-    const resultado = document.getElementById('resultado');
+  const resultado = document.getElementById('resultado');
 
-    resultado.innerHTML =
-      '<div class="espera">' +
-      '⏳ Código detectado.<br><br>' +
-      'Registrando asistencia...' +
-      '</div>';
+  resultado.innerHTML =
+    '<div class="espera">' +
+    '⏳ Código detectado.<br><br>' +
+    'Registrando asistencia...' +
+    '</div>';
 
-    detenerCamara();
+  detenerCamara();
 
-    /*************************************************
-     * CALLBACK PARA RECIBIR LA RESPUESTA
-     *************************************************/
+  // Nombre único para recibir la respuesta
+  const callback = 'respuestaQR_' + Date.now();
 
-    const callback =
-      'respuestaQR_' + Date.now();
+  // Crear la función que Apps Script va a llamar
+  window[callback] = function(respuesta) {
 
+    console.log('Respuesta de Apps Script:', respuesta);
 
-    window[callback] = function(respuesta) {
+    if (respuesta.ok) {
 
-      console.log('Respuesta de Apps Script:', respuesta);
+      resultado.innerHTML =
+        '<div class="exito">' +
+        '✅ ' + respuesta.mensaje +
+        '<br><br>' +
+        '<strong>' + respuesta.nombre + '</strong>' +
+        '<br>' +
+        respuesta.hora +
+        '</div>';
 
-      if (respuesta.ok) {
-
-        resultado.innerHTML =
-          '<div class="exito">' +
-          '✅ ' + respuesta.mensaje +
-          '<br><br>' +
-          '<strong>' + respuesta.nombre + '</strong>' +
-          '<br>' +
-          respuesta.hora +
-          '</div>';
-
-      } else {
-
-        resultado.innerHTML =
-          '<div class="error">' +
-          '❌ ' + respuesta.mensaje +
-          '</div>';
-      }
-
-
-      delete window[callback];
-
-
-      document.getElementById('botonReiniciar').style.display =
-        'inline-block';
-    };
-
-
-    /*************************************************
-     * ENVIAR TOKEN A APPS SCRIPT
-     *************************************************/
-
-    const script = document.createElement('script');
-
-    script.src =
-      URL_APPS_SCRIPT +
-      '?callback=' +
-      encodeURIComponent(callback) +
-      '&token=' +
-      encodeURIComponent(texto);
-
-
-    script.onerror = function() {
+    } else {
 
       resultado.innerHTML =
         '<div class="error">' +
-        '❌ No fue posible comunicarse con el sistema de asistencia.' +
+        '❌ ' + respuesta.mensaje +
         '</div>';
+    }
 
-      delete window[callback];
+    // Eliminar el callback después de recibir la respuesta
+    delete window[callback];
 
-      document.getElementById('botonReiniciar').style.display =
-        'inline-block';
-    };
+    // Mostrar botón para volver a escanear
+    document.getElementById('botonReiniciar').style.display =
+      'inline-block';
 
+  };
 
-    document.body.appendChild(script);
-  }
+  // Crear una etiqueta SCRIPT.
+  // Esto evita el problema CORS de fetch().
+  const script = document.createElement('script');
 
+  script.src =
+    URL_APPS_SCRIPT +
+    '?callback=' +
+    encodeURIComponent(callback) +
+    '&token=' +
+    encodeURIComponent(texto);
+
+  script.onerror = function() {
+
+    console.error('No se pudo cargar la respuesta de Apps Script.');
+
+    resultado.innerHTML =
+      '<div class="error">' +
+      '❌ No fue posible comunicarse con el sistema de asistencia.' +
+      '</div>';
+
+    delete window[callback];
+
+    document.getElementById('botonReiniciar').style.display =
+      'inline-block';
+  };
+
+  document.body.appendChild(script);
+}
 
   /*************************************************
    * DETENER CÁMARA
