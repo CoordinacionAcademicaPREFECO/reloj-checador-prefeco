@@ -427,18 +427,23 @@
 
         if (respuesta.ok) {
 
-          resultado.innerHTML =
-            '<div class="exito">' +
-            '✅ ' + respuesta.mensaje +
-            '<br><br>' +
-            '<strong>' +
-            respuesta.nombre +
-            '</strong>' +
-            '<br>' +
-            respuesta.hora +
-            '</div>';
+  resultado.innerHTML =
+    '<div class="exito">' +
+    '✅ ' + respuesta.mensaje +
+    '<br><br>' +
+    '<strong>' +
+    respuesta.nombre +
+    '</strong>' +
+    '<br>' +
+    respuesta.hora +
+    '<br><br>' +
+    '📷 Guardando fotografía...' +
+    '</div>';
 
-        }
+  // Enviar la fotografía después de registrar la asistencia
+  enviarFotografia(token);
+
+}
 
         else {
 
@@ -496,7 +501,128 @@
 
   }
 
+/*************************************************
+ * ENVIAR FOTOGRAFÍA A APPS SCRIPT
+ *************************************************/
 
+function enviarFotografia(token) {
+
+  const foto =
+    document.getElementById('foto');
+
+  const resultado =
+    document.getElementById('resultado');
+
+  if (!foto.src) {
+
+    resultado.innerHTML +=
+      '<br><span class="error">' +
+      '❌ No se encontró la fotografía.' +
+      '</span>';
+
+    return;
+  }
+
+
+  /*
+   * Creamos un formulario invisible.
+   * La fotografía se envía mediante POST
+   * a Google Apps Script.
+   */
+
+  const formulario =
+    document.createElement('form');
+
+  formulario.method = 'POST';
+
+  formulario.action =
+    URL_APPS_SCRIPT;
+
+  formulario.target =
+    'ventanaFotografia';
+
+
+  const ventana =
+    document.createElement('iframe');
+
+  ventana.name =
+    'ventanaFotografia';
+
+  ventana.style.display =
+    'none';
+
+  document.body.appendChild(ventana);
+
+
+  /*
+   * Token del docente
+   */
+
+  const campoToken =
+    document.createElement('input');
+
+  campoToken.type =
+    'hidden';
+
+  campoToken.name =
+    'token';
+
+  campoToken.value =
+    token;
+
+  formulario.appendChild(campoToken);
+
+
+  /*
+   * Fotografía en formato Base64
+   */
+
+  const campoFotografia =
+    document.createElement('input');
+
+  campoFotografia.type =
+    'hidden';
+
+  campoFotografia.name =
+    'fotografia';
+
+  campoFotografia.value =
+    foto.src;
+
+  formulario.appendChild(campoFotografia);
+
+
+  document.body.appendChild(formulario);
+
+
+  /*
+   * Enviar
+   */
+
+  formulario.submit();
+
+
+  /*
+   * Por ahora mostramos que el envío
+   * fue iniciado.
+   */
+
+  setTimeout(function() {
+
+    resultado.innerHTML =
+      '<div class="exito">' +
+      '✅ Asistencia registrada correctamente.' +
+      '<br><br>' +
+      '📷 Fotografía enviada.' +
+      '</div>';
+
+    formulario.remove();
+    ventana.remove();
+
+  }, 1500);
+
+}
+  
   /*************************************************
    * INICIAR AUTOMÁTICAMENTE
    *************************************************/
