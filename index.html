@@ -569,19 +569,15 @@ function enviarFotografia(token) {
   )
   .then(function() {
 
-    console.log(
-      'Fotografía enviada a Apps Script.'
-    );
+  console.log(
+    'Fotografía enviada a Apps Script.'
+  );
 
+  // No cambiar el mensaje que está viendo el docente.
+  // La pantalla se recargará mediante el temporizador
+  // de registrarAsistencia().
 
-    resultado.innerHTML =
-      '<div class="exito">' +
-      '✅ Asistencia registrada correctamente.' +
-      '<br><br>' +
-      '📷 Fotografía enviada para guardar.' +
-      '</div>';
-
-  })
+})
   .catch(function(error) {
 
     console.error(
