@@ -425,7 +425,7 @@
         );
 
 
-        if (respuesta.ok) {
+if (respuesta.ok) {
 
   resultado.innerHTML =
     '<div class="exito">' +
@@ -437,11 +437,16 @@
     '<br>' +
     respuesta.hora +
     '<br><br>' +
-    '📷 Guardando fotografía...' +
+    '📷 Preparando el siguiente registro...' +
     '</div>';
 
-  // Enviar la fotografía después de registrar la asistencia
+  // Enviar la fotografía
   enviarFotografia(token);
+
+  // Recargar la pantalla después de 4 segundos
+  setTimeout(function() {
+    location.reload();
+  }, 4000);
 
 }
 
